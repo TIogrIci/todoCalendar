@@ -70,16 +70,26 @@
                   </v-list-item-icon>
 
                   <v-list-item-icon>
-                    <v-menu offset-y>
+                    <v-menu offset-y close-on-content-click>
                       <template v-slot:activator="{ on, attrs }">
                         <v-icon class="pt-1" v-bind="attrs" v-on="on"> mdi-dots-vertical </v-icon>
                       </template>
                       <v-list>
-                        <v-list-item v-for="(menuItem, index) in menuItems" :key="index">
+                        <v-list-item v-for="(menuItem, index) in menuItems" :key="index" @click.stop="editItem">
                           <v-list-item-title>{{ menuItem }}</v-list-item-title>
                         </v-list-item>
                       </v-list>
                     </v-menu>
+                    <v-dialog v-model="editItemDialog">
+                      <task-edit-dialog
+                        @clickSubmit="update"
+                        @cancelDialog="cancel"
+                        :title="list.title"
+                        :description="list.description"
+                        :datetime="list.datetime"
+                        :editId="index"
+                      ></task-edit-dialog>
+                    </v-dialog>
                   </v-list-item-icon>
                   <v-divider class="mt-2"></v-divider>
                 </v-list-item>
@@ -118,6 +128,8 @@ export default {
     sec: 0,
     timerOn: false,
     timerObj: null,
+    editItemDialog: false,
+    editId: 0,
   }),
   methods: {
     postMessage() {
@@ -127,11 +139,11 @@ export default {
         description: this.data.description,
         date: this.data.datetime,
       };
-      console.log(todo);
+      //console.log(todo);
       this.$axios.post(url, { todo })
         .then(
           res => {
-            console.log(res.data.data)
+            //console.log(res.data.data)
             this.data_list.push(res.data.data)
           }
         )
@@ -144,13 +156,35 @@ export default {
       const todo = {
         title: params.title,
         description: params.description,
-        date: params.datetime,
+        date: params.date,
       };
       this.$axios.post('/api/todos', { todo })
         .then(
           res => {
-            console.log(res.data.data)
+            //console.log("post data:" + res.data.data)
             this.data_list.push(res.data.data)
+          }
+        )
+        .catch(error => console.log(error));
+        this.data.title = ""
+        this.data.description = ""
+    },
+    update(params) {
+      this.editItemDialog = false
+      const todo = {
+        title: params.title,
+        description: params.description,
+        date: params.date,
+      };
+      const id = this.data_list[this.editId].id
+      //console.log(this.data_list[this.editId].id);
+      this.$axios.put('/api/todos/' + id, { todo })
+        .then(
+          res => {
+            //console.log("update data:" + res.data.data)
+            this.$set(this.data_list, this.editId, res.data.data)
+            //this.data_list[this.editId] = res.data.data
+            console.log(this.data_list);
           }
         )
         .catch(error => console.log(error));
@@ -159,6 +193,7 @@ export default {
     },
     cancel() {
       this.dialog = false
+      this.editItemDialog = false
     },
     clearMessage() {
       this.data.title = ""
@@ -173,6 +208,9 @@ export default {
     stopTimer() {
       clearInterval(this.timerObj)
       this.timerOn = false
+    },
+    editItem() {
+      this.editItemDialog = true
     },
   },
   computed: {

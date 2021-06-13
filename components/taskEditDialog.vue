@@ -73,6 +73,7 @@ export default {
         },
         submit() {
             this.$emit('clickSubmit', this.data)
+            //console.log(this.data);
             this.data = {}
         }
     }
