@@ -33,7 +33,6 @@
           ></task-edit-dialog>
         </v-dialog>
       </div>
-
       <v-row>
         <v-col
           v-for="card in cards"
@@ -44,8 +43,8 @@
             <v-subheader>{{ card }}</v-subheader>
               <v-list two-line>
                 <v-list-item
-                  v-for="(list,index) in data_list"
-                  :key="index"
+                  v-for="(list,list_index) in data_list"
+                  :key="list_index"
                   id="list-item"
                   style="height: 10px"
                 >
@@ -68,27 +67,32 @@
                       mdi-stop
                     </v-icon>
                   </v-list-item-icon>
-
                   <v-list-item-icon>
                     <v-menu offset-y close-on-content-click>
                       <template v-slot:activator="{ on, attrs }">
                         <v-icon class="pt-1" v-bind="attrs" v-on="on"> mdi-dots-vertical </v-icon>
                       </template>
                       <v-list>
-                        <v-list-item v-for="(menuItem, index) in menuItems" :key="index" @click.stop="editItem">
+                        <v-list-item v-for="(menuItem, index) in menuItems" :key="index" @click.stop="selectMenuItem(menuItem)">
                           <v-list-item-title>{{ menuItem }}</v-list-item-title>
                         </v-list-item>
                       </v-list>
                     </v-menu>
-                    <v-dialog v-model="editItemDialog">
+                    <v-dialog v-model="editItemDialog" :retain-focus="false">
                       <task-edit-dialog
                         @clickSubmit="update"
                         @cancelDialog="cancel"
                         :title="list.title"
                         :description="list.description"
                         :datetime="list.datetime"
-                        :editId="index"
+                        :editId="list_index"
                       ></task-edit-dialog>
+                    </v-dialog>
+                    <v-dialog v-model="deleteConfirmDialog" width="500" :retain-focus="false">
+                      <delete-confirm-dialog
+                        @notDeleteTodo="deleteConfirmDialog=false"
+                        @deleteTodo="deleteTodo(list_index)"
+                      ></delete-confirm-dialog>
                     </v-dialog>
                   </v-list-item-icon>
                   <v-divider class="mt-2"></v-divider>
@@ -105,11 +109,13 @@
 import { Datetime } from 'vue-datetime'
 import 'vue-datetime/dist/vue-datetime.css'
 import  taskEditDialog from '~/components/taskEditDialog.vue'
+import  deleteConfirmDialog from '~/components/deleteConfirmDialog.vue'
 
 export default {
   components: {
     datetime: Datetime,
-    taskEditDialog
+    taskEditDialog,
+    deleteConfirmDialog
   },
   layout (context) {
     return 'sidebar'
@@ -129,6 +135,7 @@ export default {
     timerOn: false,
     timerObj: null,
     editItemDialog: false,
+    deleteConfirmDialog: false,
     editId: 0,
   }),
   methods: {
@@ -145,6 +152,7 @@ export default {
           res => {
             //console.log(res.data.data)
             this.data_list.push(res.data.data)
+            console.log("post data id:" + res.data.data.id)
           }
         )
         .catch(error => console.log(error));
@@ -161,8 +169,8 @@ export default {
       this.$axios.post('/api/todos', { todo })
         .then(
           res => {
-            //console.log("post data:" + res.data.data)
             this.data_list.push(res.data.data)
+            console.log("post data id:" + res.data.data.id)
           }
         )
         .catch(error => console.log(error));
@@ -177,11 +185,9 @@ export default {
         date: params.date,
       };
       const id = this.data_list[this.editId].id
-      //console.log(this.data_list[this.editId].id);
       this.$axios.put('/api/todos/' + id, { todo })
         .then(
           res => {
-            //console.log("update data:" + res.data.data)
             this.$set(this.data_list, this.editId, res.data.data)
             //this.data_list[this.editId] = res.data.data
             console.log(this.data_list);
@@ -209,8 +215,30 @@ export default {
       clearInterval(this.timerObj)
       this.timerOn = false
     },
-    editItem() {
-      this.editItemDialog = true
+    selectMenuItem(value) {
+      if(value == "編集") {
+        this.editItemDialog = true
+      } else if(value == "削除") {
+        this.deleteConfirmDialog = true
+      } else {
+        console.log(value);
+      }
+    },
+    deleteTodo(index) {
+      console.log(this.deleteId);
+      const id = this.data_list[index].id
+      this.$axios.delete('/api/todos/' + id)
+        .then(
+          res => {
+            const delete_id = res.data.data.id
+            console.log(delete_id);
+            //this.data_list.splice(delete_id, delete_id)
+            this.data_list.splice(index, 1)
+            console.log(this.data_list);
+          }
+        )
+        .catch(error => console.log(error));
+      this.deleteConfirmDialog = false
     },
   },
   computed: {

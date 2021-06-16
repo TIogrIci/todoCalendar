@@ -11,12 +11,12 @@ class Api::V1::TodosController < ApplicationController
     end
 
     def create
-       todo = Todo.new(todo_params)
-       if todo.save
+        todo = Todo.new(todo_params)
+        if todo.save
             render json: { status: 'SUCCESS', data: todo }
-       else
+        else
             render json: { status: 'ERROR', data: todo.errors }
-       end  
+        end  
     end
 
     def update
@@ -27,7 +27,7 @@ class Api::V1::TodosController < ApplicationController
         end
     end
 
-    def delete
+    def destroy
         @todo.destroy
         render json: { status: 'SUCCESS', message: 'Deleted the todo', data: @todo }
     end
